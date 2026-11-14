@@ -60,11 +60,10 @@ mod token;
 use crate::Warning;
 use crate::analyse::Inferred;
 use crate::ast::{
-    AssertKind,
-    Arg, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption,
-    BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant,
-    CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntOperator,
-    Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
+    Arg, ArgNames, Assert, AssertKind, AssignName, Assignment, AssignmentKind, BinOp,
+    BitArrayOption, BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard,
+    Constant, CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import,
+    IntOperator, Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
     RecordConstructorArg, RecordUpdateArg, Statement, StringPrefixLeftSideAssignment, TailPattern,
     TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstConstructorName,
     TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,

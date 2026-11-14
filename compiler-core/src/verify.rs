@@ -17,8 +17,8 @@ use ecow::{EcoString, eco_format};
 
 use crate::analyse::CONTRACT_RESULT;
 use crate::ast::{
-    AssertKind, AssignmentKind, BinOp, Pattern, Statement, TypedExpr, TypedFunction,
-    TypedModule, TypedStatement,
+    AssertKind, AssignmentKind, BinOp, Pattern, Statement, TypedExpr, TypedFunction, TypedModule,
+    TypedStatement,
 };
 use crate::type_::{Type, ValueConstructorVariant};
 use src_span::SrcSpan;
@@ -102,7 +102,12 @@ pub fn verify_module(module: &TypedModule) -> Result<Vec<Finding>, Error> {
         let mut encoder = Encoder::new(&module.name, &contracts);
         encoder.function(function);
         for query in encoder.obligations {
-            let outcome = solve(&encoder.declarations, &encoder.facts, &query, &encoder.inputs)?;
+            let outcome = solve(
+                &encoder.declarations,
+                &encoder.facts,
+                &query,
+                &encoder.inputs,
+            )?;
             findings.push(Finding {
                 function: name.clone(),
                 location: query.location,
@@ -255,11 +260,9 @@ impl<'a> Encoder<'a> {
                         self.prove(term.clone(), assert.location, Obligation::Ensures);
                         self.assume(&term);
                     }
-                    (AssertKind::Ensures, None) => self.prove(
-                        "false".into(),
-                        assert.location,
-                        Obligation::Ensures,
-                    ),
+                    (AssertKind::Ensures, None) => {
+                        self.prove("false".into(), assert.location, Obligation::Ensures)
+                    }
                     // Plain asserts are runtime checks the user wrote; v0 only
                     // learns from them.
                     (AssertKind::Plain, Some(term)) => self.assume(&term),
@@ -322,8 +325,7 @@ impl<'a> Encoder<'a> {
                 ..
             } => {
                 let saved = self.env.clone();
-                for step in std::iter::once(first_value).chain(assignments.iter().map(|(a, _)| a))
-                {
+                for step in std::iter::once(first_value).chain(assignments.iter().map(|(a, _)| a)) {
                     let value = self.expression(&step.value);
                     self.bind(&step.name, &step.value.type_(), value);
                 }
@@ -449,7 +451,11 @@ impl<'a> Encoder<'a> {
 
     /// The condition under which `pattern` matches, binding variables it
     /// introduces. `None` means the pattern shape is not modelled.
-    fn pattern(&mut self, pattern: &Pattern<Arc<Type>>, subject: Option<&str>) -> Option<Option<String>> {
+    fn pattern(
+        &mut self,
+        pattern: &Pattern<Arc<Type>>,
+        subject: Option<&str>,
+    ) -> Option<Option<String>> {
         match pattern {
             Pattern::Discard { .. } => Some(None),
             Pattern::Variable { name, type_, .. } => {
@@ -458,11 +464,17 @@ impl<'a> Encoder<'a> {
             }
             Pattern::Int { int_value, .. } => {
                 let subject = subject?;
-                Some(Some(format!("(= {subject} {})", int_literal(&int_value.to_string()))))
+                Some(Some(format!(
+                    "(= {subject} {})",
+                    int_literal(&int_value.to_string())
+                )))
             }
-            Pattern::Constructor { name, type_, arguments, .. }
-                if type_.is_bool() && arguments.is_empty() =>
-            {
+            Pattern::Constructor {
+                name,
+                type_,
+                arguments,
+                ..
+            } if type_.is_bool() && arguments.is_empty() => {
                 let subject = subject?;
                 Some(Some(if name == "True" {
                     subject.to_string()
@@ -481,7 +493,10 @@ impl<'a> Encoder<'a> {
         type_: &Arc<Type>,
         location: SrcSpan,
     ) -> Term {
-        let values: Vec<Term> = arguments.iter().map(|a| self.expression(&a.value)).collect();
+        let values: Vec<Term> = arguments
+            .iter()
+            .map(|a| self.expression(&a.value))
+            .collect();
         let result = self.fresh("call", type_);
 
         let callee = match fun {
@@ -508,16 +523,30 @@ impl<'a> Encoder<'a> {
                 let _ = self.env.insert(parameter.clone(), value.clone());
             }
         }
-        let requires: Vec<Term> = contract.requires.iter().map(|c| self.expression(c)).collect();
+        let requires: Vec<Term> = contract
+            .requires
+            .iter()
+            .map(|c| self.expression(c))
+            .collect();
         if let Some(result) = &result {
             let _ = self.env.insert(CONTRACT_RESULT.into(), result.clone());
         }
-        let ensures: Vec<Term> = contract.ensures.iter().map(|c| self.expression(c)).collect();
+        let ensures: Vec<Term> = contract
+            .ensures
+            .iter()
+            .map(|c| self.expression(c))
+            .collect();
         self.env = saved;
 
         for requirement in requires {
             let goal = requirement.unwrap_or_else(|| "false".into());
-            self.prove(goal, location, Obligation::CallRequires { callee: callee.clone() });
+            self.prove(
+                goal,
+                location,
+                Obligation::CallRequires {
+                    callee: callee.clone(),
+                },
+            );
         }
         for guarantee in ensures.into_iter().flatten() {
             self.assume(&guarantee);
@@ -615,9 +644,7 @@ fn solve(
             Outcome::Counterexample(
                 inputs
                     .iter()
-                    .filter_map(|(name, symbol)| {
-                        Some((name.clone(), model_value(&model, symbol)?))
-                    })
+                    .filter_map(|(name, symbol)| Some((name.clone(), model_value(&model, symbol)?)))
                     .collect(),
             )
         }

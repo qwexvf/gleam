@@ -842,7 +842,8 @@ impl<'a> PackageModulesAnalyser<'a> {
                 }
             }
             Err(crate::verify::Error::SolverUnavailable(reason)) => {
-                self.warnings.emit(Warning::ContractSolverUnavailable { path, reason });
+                self.warnings
+                    .emit(Warning::ContractSolverUnavailable { path, reason });
             }
         }
     }

@@ -10,13 +10,13 @@ mod tests;
 use crate::{
     GLEAM_CORE_PACKAGE_NAME, STDLIB_PACKAGE_NAME,
     ast::{
-        self, Arg, Assert, AssertKind, Assignment, AssignmentKind, BitArrayOption, Pattern,
-        UntypedExpr, CustomType, DefinitionLocation, Function, GroupedDefinitions,
-        Import, ModuleConstant, Publicity, RecordConstructor, RecordConstructorArg, Statement,
-        TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
-        TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModule,
-        TypedModuleConstant, TypedTypeAlias, UntypedArg, UntypedCustomType, UntypedFunction,
-        UntypedImport, UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
+        self, Arg, Assert, AssertKind, Assignment, AssignmentKind, BitArrayOption, CustomType,
+        DefinitionLocation, Function, GroupedDefinitions, Import, ModuleConstant, Pattern,
+        Publicity, RecordConstructor, RecordConstructorArg, Statement, TypeAlias, TypeAst,
+        TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedCustomType,
+        TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModule, TypedModuleConstant,
+        TypedTypeAlias, UntypedArg, UntypedCustomType, UntypedExpr, UntypedFunction, UntypedImport,
+        UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
     call_graph::{CallGraphNode, into_dependency_order},
@@ -47,7 +47,6 @@ use camino::Utf8PathBuf;
 use ecow::{EcoString, eco_format};
 use hexpm::version::Version;
 use itertools::Itertools;
-use vec1::Vec1;
 use name::{check_argument_names, check_name_case};
 use regex::Regex;
 use src_span::{LineNumbers, SrcSpan};
@@ -56,6 +55,7 @@ use std::{
     ops::Deref,
     sync::{Arc, OnceLock},
 };
+use vec1::Vec1;
 
 use self::imports::Importer;
 

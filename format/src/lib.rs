@@ -1069,7 +1069,11 @@ impl<'a, 'doc> Formatter<'a> {
         let attributes = requires
             .iter()
             .map(|clause| (REQUIRES_ATTRIBUTE_DOCUMENT, clause))
-            .chain(ensures.iter().map(|clause| (ENSURES_ATTRIBUTE_DOCUMENT, clause)))
+            .chain(
+                ensures
+                    .iter()
+                    .map(|clause| (ENSURES_ATTRIBUTE_DOCUMENT, clause)),
+            )
             .fold(attributes, |doc, (attribute, clause)| {
                 docvec![
                     arena,
