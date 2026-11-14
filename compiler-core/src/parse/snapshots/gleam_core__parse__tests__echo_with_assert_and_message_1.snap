@@ -52,6 +52,7 @@ expression: assert 1 == echo 2 as this_belongs_to_echo
                 },
             },
             message: None,
+            kind: Plain,
         },
     ),
 ]

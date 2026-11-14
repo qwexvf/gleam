@@ -25,6 +25,7 @@ expression: "assert False as \"Uh oh\""
                     value: "Uh oh",
                 },
             ),
+            kind: Plain,
         },
     ),
 ]

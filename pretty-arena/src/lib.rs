@@ -633,6 +633,8 @@ const_str!(LEFT_ARROW_DOCUMENT, "<-", 2);
 const_str!(MINUS_SPACE_DOCUMENT, "- ", 2);
 const_str!(EXCLAMATION_MARK_DOCUMENT, "!", 1);
 const_str!(ASSERT_SPACE_DOCUMENT, "assert ", 7);
+const_str!(REQUIRES_ATTRIBUTE_DOCUMENT, "@requires(", 10);
+const_str!(ENSURES_ATTRIBUTE_DOCUMENT, "@ensures(", 9);
 const_str!(PIPE_SPACE_DOCUMENT, "|> ", 3);
 const_str!(COLON_DOCUMENT, ":", 1);
 const_str!(HASHTAG_DOCUMENT, "#", 1);

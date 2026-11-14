@@ -60,6 +60,7 @@ expression: assert 1 == echo 2 as this_belongs_to_echo as this_belongs_to_assert
                     name: "this_belongs_to_assert",
                 },
             ),
+            kind: Plain,
         },
     ),
 ]

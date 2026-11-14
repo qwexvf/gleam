@@ -697,6 +697,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 location,
                 value,
                 message,
+                kind,
             }) => {
                 let value = self.fold_expr(value);
                 let message = message.map(|message| self.fold_expr(message));
@@ -704,6 +705,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                     location,
                     value,
                     message,
+                    kind,
                 })
             }
         }

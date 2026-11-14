@@ -186,6 +186,19 @@ pub enum Warning {
         src: EcoString,
         location: SrcSpan,
     },
+
+    /// A contract obligation the solver did not prove. It stays a runtime
+    /// assert in the generated code.
+    Contract {
+        path: Utf8PathBuf,
+        src: EcoString,
+        finding: crate::verify::Finding,
+    },
+
+    ContractSolverUnavailable {
+        path: Utf8PathBuf,
+        reason: String,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -472,6 +485,74 @@ comment so it is not attached to any definition.",
                     extra_labels: Vec::new(),
                 }),
                 hint: Some("Move the comment above the doc comment".into()),
+            },
+
+            Warning::Contract { path, src, finding } => {
+                use crate::verify::{Obligation, Outcome};
+                let what = match &finding.obligation {
+                    Obligation::Ensures => "This `ensures` clause".to_string(),
+                    Obligation::CallRequires { callee } => {
+                        format!("A `requires` clause of `{callee}`")
+                    }
+                };
+                let (title, text, label) = match &finding.outcome {
+                    Outcome::Counterexample(model) => {
+                        let values = model
+                            .iter()
+                            .map(|(name, value)| format!("{name} = {value}"))
+                            .join(", ");
+                        let values = if values.is_empty() {
+                            "no parameters".to_string()
+                        } else {
+                            values
+                        };
+                        (
+                            "Contract can be violated",
+                            format!(
+                                "{what} does not hold for every input to `{}`.\n\
+Counterexample: {values}",
+                                finding.function
+                            ),
+                            "Fails for the counterexample",
+                        )
+                    }
+                    Outcome::Unknown(reason) => (
+                        "Contract not proved",
+                        format!(
+                            "The solver could not decide {} ({reason}).",
+                            what.to_lowercase()
+                        ),
+                        "Not proved",
+                    ),
+                    Outcome::Proved => ("Contract proved", String::new(), ""),
+                };
+                Diagnostic {
+                    title: title.into(),
+                    text,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        path: path.to_path_buf(),
+                        src: src.clone(),
+                        label: diagnostic::Label {
+                            text: Some(label.into()),
+                            span: finding.location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                    hint: Some("It is still checked at runtime.".into()),
+                }
+            }
+
+            Warning::ContractSolverUnavailable { path, reason } => Diagnostic {
+                title: "Contracts not verified".into(),
+                text: wrap(&format!(
+                    "{path} has contracts but the SMT solver could not be run: {reason}"
+                )),
+                level: diagnostic::Level::Warning,
+                location: None,
+                hint: Some(
+                    "Install z3 or set GLEAM_Z3. Contracts are still checked at runtime.".into(),
+                ),
             },
 
             Warning::Type { path, warning, src } => match warning.as_ref() {

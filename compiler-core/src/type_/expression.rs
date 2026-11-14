@@ -2406,6 +2406,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             value,
             location,
             message,
+            kind,
         } = assert;
         let value_location = value.location();
 
@@ -2433,6 +2434,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             value,
             message,
+            kind,
         }
     }
 

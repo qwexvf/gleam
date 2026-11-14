@@ -90,6 +90,7 @@ pub mod requirement;
 pub mod strings;
 pub mod type_;
 pub mod uid;
+pub mod verify;
 pub mod version;
 pub mod warning;
 

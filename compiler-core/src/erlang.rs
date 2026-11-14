@@ -1509,6 +1509,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             value,
             location,
             message,
+            kind: _,
         } = assert;
 
         match value {

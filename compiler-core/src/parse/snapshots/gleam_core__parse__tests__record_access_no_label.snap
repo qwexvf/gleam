@@ -166,6 +166,8 @@ Parsed {
                             uses_javascript_externals: false,
                         },
                         purity: Pure,
+                        requires: [],
+                        ensures: [],
                     },
                 ),
                 target: None,

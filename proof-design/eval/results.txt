@@ -1,0 +1,32 @@
+     1.1 ms  E1 withdraw requires a<=b
+             PROVED
+     1.5 ms  E1 withdraw missing a<=b
+             COUNTEREXAMPLE a=1, r=-1, b=0
+     0.9 ms  E2 deposit preserves Balance invariant
+             PROVED
+     0.6 ms  E2 new() only builds Balance on the x>=0 branch
+             PROVED
+  5013.7 ms  E3a whole-program: forall l. allnn(l) -> sum(l)>=0 (needs induction)
+             UNKNOWN (timeout)
+     1.0 ms  E3b modular: assume ensures of recursive call
+             PROVED
+     0.1 ms  E4 caller guard i>=0 && i<length(xs) meets at() precondition
+             PROVED
+     0.5 ms  E4 caller guard i<=length(xs) (off by one)
+             COUNTEREXAMPLE xs=Empty(Seq(Int)), i=0
+     0.0 ms  E5 Z3 built-in (-7)/2
+             = -4 (Erlang div gives -3)
+     0.3 ms  E5 gleam_div(-7,2) == -3 under the Gleam encoding
+             PROVED
+     0.2 ms  E5 (p/q)*q <= p with Z3 built-in division
+             PROVED
+     0.3 ms  E5 (p/q)*q <= p with Gleam division
+             COUNTEREXAMPLE p=-7, q=2
+     5.6 ms  E6 w>=0,h>=1 -> w*h >= w
+             PROVED
+     0.7 ms  E6 n*(n+1) is even
+             PROVED
+    18.0 ms  E7 JS Int: x + 1 != x for every finite x
+             COUNTEREXAMPLE fx=-1.2442043109368963182959078039857558906078338623046875*(2**879)
+     0.1 ms  E7 Erlang Int: x + 1 != x
+             PROVED

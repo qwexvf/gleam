@@ -1056,6 +1056,8 @@ impl<'a, 'doc> Formatter<'a> {
             external_javascript,
             implementations: _,
             purity: _,
+            requires,
+            ensures,
         } = function;
 
         let attributes = AttributesPrinter::new()
@@ -1064,6 +1066,20 @@ impl<'a, 'doc> Formatter<'a> {
             .set_external_erlang(external_erlang)
             .set_external_javascript(external_javascript)
             .to_doc(arena);
+        let attributes = requires
+            .iter()
+            .map(|clause| (REQUIRES_ATTRIBUTE_DOCUMENT, clause))
+            .chain(ensures.iter().map(|clause| (ENSURES_ATTRIBUTE_DOCUMENT, clause)))
+            .fold(attributes, |doc, (attribute, clause)| {
+                docvec![
+                    arena,
+                    doc,
+                    attribute,
+                    self.expr(arena, clause).group(arena),
+                    CLOSE_PAREN_DOCUMENT,
+                    LINE_DOCUMENT
+                ]
+            });
 
         // Fn name and args
         let arguments = arguments

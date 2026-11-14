@@ -902,6 +902,11 @@ pub struct Function<T, Expr> {
     pub external_javascript: Option<(EcoString, EcoString, SrcSpan)>,
     pub implementations: Implementations,
     pub purity: Purity,
+    /// `requires` clauses. Only present before type checking: analysis
+    /// rewrites them into `assert` statements with `AssertKind::Requires`.
+    pub requires: Vec<Expr>,
+    /// `ensures` clauses, rewritten like `requires` with `AssertKind::Ensures`.
+    pub ensures: Vec<Expr>,
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
@@ -4810,6 +4815,18 @@ pub struct Assert<Expression> {
     pub location: SrcSpan,
     pub value: Expression,
     pub message: Option<Expression>,
+    pub kind: AssertKind,
+}
+
+/// Where an `assert` statement came from. Contract clauses are rewritten into
+/// asserts so they reuse type checking and runtime checking; the kind lets the
+/// verifier tell them apart from asserts the user wrote.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AssertKind {
+    #[default]
+    Plain,
+    Requires,
+    Ensures,
 }
 
 impl TypedAssert {

@@ -60,6 +60,7 @@ mod token;
 use crate::Warning;
 use crate::analyse::Inferred;
 use crate::ast::{
+    AssertKind,
     Arg, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption,
     BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant,
     CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntOperator,
@@ -133,11 +134,16 @@ struct Attributes {
     external_erlang: Option<(EcoString, EcoString, SrcSpan)>,
     external_javascript: Option<(EcoString, EcoString, SrcSpan)>,
     internal: InternalAttribute,
+    requires: Vec<UntypedExpr>,
+    ensures: Vec<UntypedExpr>,
 }
 
 impl Attributes {
     fn has_function_only(&self) -> bool {
-        self.external_erlang.is_some() || self.external_javascript.is_some()
+        self.external_erlang.is_some()
+            || self.external_javascript.is_some()
+            || !self.requires.is_empty()
+            || !self.ensures.is_empty()
     }
 
     fn has_external_for(&self, target: Target) -> bool {
@@ -383,6 +389,12 @@ where
         }?;
 
         match (def, location) {
+            (Some(definition), Some(location))
+                if !definition.is_function()
+                    && (!attributes.requires.is_empty() || !attributes.ensures.is_empty()) =>
+            {
+                parse_error(ParseErrorType::ExpectedFunctionDefinition, location)
+            }
             (Some(definition), _) if definition.is_function() || definition.is_custom_type() => {
                 Ok(Some(TargetedDefinition {
                     definition,
@@ -1236,6 +1248,7 @@ where
             location: SrcSpan { start, end },
             value,
             message,
+            kind: AssertKind::Plain,
         }))
     }
 
@@ -2351,6 +2364,8 @@ where
                 uses_javascript_externals: false,
             },
             purity: Purity::Pure,
+            requires: std::mem::take(&mut attributes.requires),
+            ensures: std::mem::take(&mut attributes.ensures),
         })))
     }
 
@@ -4869,10 +4884,30 @@ functions are declared separately from types.";
             "target" => self.parse_target_attribute(start, end, attributes),
             "deprecated" => self.parse_deprecated_attribute(start, end, attributes),
             "internal" => self.parse_internal_attribute(start, end, attributes),
+            "requires" => {
+                let clause = self.parse_contract_attribute()?;
+                let end = clause.1;
+                attributes.requires.push(clause.0);
+                Ok(end)
+            }
+            "ensures" => {
+                let clause = self.parse_contract_attribute()?;
+                let end = clause.1;
+                attributes.ensures.push(clause.0);
+                Ok(end)
+            }
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan { start, end }),
         }?;
 
         Ok(end)
+    }
+
+    /// `@requires(<expr>)` / `@ensures(<expr>)`: any Gleam expression.
+    fn parse_contract_attribute(&mut self) -> Result<(UntypedExpr, u32), ParseError> {
+        let _ = self.expect_one(&Token::LeftParen)?;
+        let clause = self.expect_expression()?;
+        let (_, end) = self.expect_one(&Token::RightParen)?;
+        Ok((clause, end))
     }
 
     fn parse_target_attribute(

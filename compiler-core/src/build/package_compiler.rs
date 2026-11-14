@@ -697,6 +697,7 @@ impl<'a> PackageModulesAnalyser<'a> {
                         ast,
                     };
                     module.attach_doc_and_module_comments();
+                    self.verify_contracts(&module);
 
                     let _ = self.incomplete_modules.remove(&module.name);
                     self.register_module_interface(&module);
@@ -812,6 +813,40 @@ impl<'a> PackageModulesAnalyser<'a> {
     }
 
     /// Performs type inference for the given untyped module.
+    /// Contracts are only checked for the Erlang target: on JavaScript `Int`
+    /// is a float64 and the integer encoding would prove false things.
+    fn verify_contracts(&self, module: &Module) {
+        if self.target != Target::Erlang || !crate::verify::has_contracts(&module.ast) {
+            return;
+        }
+        let path = module.input_path.clone();
+        let src = module.code.clone();
+        match crate::verify::verify_module(&module.ast) {
+            Ok(findings) => {
+                for finding in findings {
+                    if finding.outcome != crate::verify::Outcome::Proved {
+                        self.warnings.emit(Warning::Contract {
+                            path: path.clone(),
+                            src: src.clone(),
+                            finding,
+                        });
+                    } else if std::env::var_os("GLEAM_VERIFY_VERBOSE").is_some() {
+                        eprintln!(
+                            "proved {}.{} {:?} at {}",
+                            module.name,
+                            finding.function,
+                            finding.obligation,
+                            finding.location.start
+                        );
+                    }
+                }
+            }
+            Err(crate::verify::Error::SolverUnavailable(reason)) => {
+                self.warnings.emit(Warning::ContractSolverUnavailable { path, reason });
+            }
+        }
+    }
+
     fn infer_module(
         &self,
         path: Utf8PathBuf,

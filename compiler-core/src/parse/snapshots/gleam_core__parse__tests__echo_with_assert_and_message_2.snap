@@ -35,6 +35,7 @@ expression: assert echo True as this_belongs_to_echo
                 ),
             },
             message: None,
+            kind: Plain,
         },
     ),
 ]

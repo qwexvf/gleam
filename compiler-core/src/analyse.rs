@@ -10,7 +10,8 @@ mod tests;
 use crate::{
     GLEAM_CORE_PACKAGE_NAME, STDLIB_PACKAGE_NAME,
     ast::{
-        self, Arg, BitArrayOption, CustomType, DefinitionLocation, Function, GroupedDefinitions,
+        self, Arg, Assert, AssertKind, Assignment, AssignmentKind, BitArrayOption, Pattern,
+        UntypedExpr, CustomType, DefinitionLocation, Function, GroupedDefinitions,
         Import, ModuleConstant, Publicity, RecordConstructor, RecordConstructorArg, Statement,
         TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
         TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModule,
@@ -21,6 +22,7 @@ use crate::{
     call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
     dep_tree,
+    exhaustiveness::CompiledCase,
     parse::SpannedString,
     reference::{EntityKind, LabelOwner, ReferenceKind},
     type_::{
@@ -29,7 +31,10 @@ use crate::{
         TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
         ValueConstructorVariant, Warning,
         environment::*,
-        error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
+        error::{
+            Error, FeatureKind, MissingAnnotation, Named, Problems, VariableDeclaration,
+            VariableOrigin, VariableSyntax, convert_unify_error,
+        },
         expression::{ExprTyper, FunctionDefinition, Implementations, Purity},
         fields::FieldMapBuilder,
         hydrator::Hydrator,
@@ -42,6 +47,7 @@ use camino::Utf8PathBuf;
 use ecow::{EcoString, eco_format};
 use hexpm::version::Version;
 use itertools::Itertools;
+use vec1::Vec1;
 use name::{check_argument_names, check_name_case};
 use regex::Regex;
 use src_span::{LineNumbers, SrcSpan};
@@ -50,7 +56,6 @@ use std::{
     ops::Deref,
     sync::{Arc, OnceLock},
 };
-use vec1::Vec1;
 
 use self::imports::Importer;
 
@@ -544,7 +549,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: (),
             implementations: _,
             purity: _,
+            requires,
+            ensures,
         } = f;
+        let body = desugar_contracts(body, requires, ensures);
         let (name_location, name) = name.expect("Function in a definition must be named");
         let target = environment.target;
         let body_location = body
@@ -824,6 +832,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             implementations,
             purity,
+            requires: vec![],
+            ensures: vec![],
         }
     }
 
@@ -1597,6 +1607,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: _,
             implementations,
             purity,
+            requires: _,
+            ensures: _,
         } = f;
         let (name_location, name) = name.as_ref().expect("A module's function must be named");
 
@@ -1951,6 +1963,8 @@ fn generalise_function(
         external_javascript,
         implementations,
         purity,
+        requires,
+        ensures,
     } = function;
 
     let (name_location, name) = name.expect("Function in a definition must be named");
@@ -2014,6 +2028,8 @@ fn generalise_function(
         external_javascript,
         implementations,
         purity,
+        requires,
+        ensures,
     }
 }
 
@@ -2237,3 +2253,79 @@ fn sorted_type_aliases(aliases: &Vec<UntypedTypeAlias>) -> Result<Vec<&UntypedTy
         .sorted_by_key(|alias| sorted_deps.iter().position(|x| x == &alias.alias))
         .collect())
 }
+
+/// Rewrites contract clauses into asserts so they are type checked and, when
+/// the verifier cannot prove them, checked at runtime:
+///
+/// ```gleam
+/// { assert <requires>  let result = { <body> }  assert <ensures>  result }
+/// ```
+///
+/// Body-less (external) functions are left alone.
+fn desugar_contracts(
+    body: Vec<UntypedStatement>,
+    requires: Vec<UntypedExpr>,
+    ensures: Vec<UntypedExpr>,
+) -> Vec<UntypedStatement> {
+    if body.is_empty() || (requires.is_empty() && ensures.is_empty()) {
+        return body;
+    }
+
+    let assert = |value: UntypedExpr, kind| {
+        Statement::Assert(Assert {
+            location: value.location(),
+            value,
+            message: None,
+            kind,
+        })
+    };
+
+    let mut statements: Vec<UntypedStatement> = requires
+        .into_iter()
+        .map(|value| assert(value, AssertKind::Requires))
+        .collect();
+
+    if ensures.is_empty() {
+        statements.extend(body);
+        return statements;
+    }
+
+    let body_location = body
+        .first()
+        .map(|first| first.location())
+        .unwrap_or_default()
+        .merge(&body.last().map(|last| last.location()).unwrap_or_default());
+    let body = Vec1::try_from_vec(body).expect("non-empty function body");
+    statements.push(Statement::Assignment(Box::new(Assignment {
+        location: body_location,
+        value: UntypedExpr::Block {
+            location: body_location,
+            statements: body,
+        },
+        pattern: Pattern::Variable {
+            location: body_location,
+            name: CONTRACT_RESULT.into(),
+            type_: (),
+            origin: VariableOrigin {
+                syntax: VariableSyntax::Generated,
+                declaration: VariableDeclaration::LetPattern,
+            },
+        },
+        kind: AssignmentKind::Let,
+        compiled_case: CompiledCase::failure(),
+        annotation: None,
+    })));
+    statements.extend(
+        ensures
+            .into_iter()
+            .map(|value| assert(value, AssertKind::Ensures)),
+    );
+    statements.push(Statement::Expression(UntypedExpr::Var {
+        location: body_location,
+        name: CONTRACT_RESULT.into(),
+    }));
+    statements
+}
+
+/// The name `ensures` clauses use for the function's return value.
+pub const CONTRACT_RESULT: &str = "result";

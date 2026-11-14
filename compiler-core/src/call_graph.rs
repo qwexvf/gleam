@@ -119,7 +119,16 @@ impl<'a> CallGraphBuilder<'a> {
             self.define(name);
         }
 
+        // Contract clauses are type checked as part of the body, so functions
+        // they call must be inferred first too.
+        for clause in &function.requires {
+            self.expression(clause);
+        }
         self.statements(&function.body);
+        self.define(crate::analyse::CONTRACT_RESULT);
+        for clause in &function.ensures {
+            self.expression(clause);
+        }
 
         self.names = names;
     }

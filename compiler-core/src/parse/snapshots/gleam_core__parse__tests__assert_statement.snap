@@ -34,6 +34,7 @@ expression: assert 10 != 11
                 },
             },
             message: None,
+            kind: Plain,
         },
     ),
 ]

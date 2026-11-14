@@ -115,6 +115,11 @@ fn all_files_have_copyright_notice() {
             let file_name = path.file_name().and_then(|s| s.to_str())?;
             let extension = path.extension()?;
 
+            // Design notes and evaluation scripts for the contracts fork.
+            if path.starts_with("../proof-design/") {
+                return None;
+            }
+
             match extension.to_str().expect("file extension") {
                 // Test files.
                 "new" => return None,

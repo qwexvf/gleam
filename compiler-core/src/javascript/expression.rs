@@ -1270,6 +1270,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             location,
             value,
             message,
+            kind: _,
         } = assert;
 
         let message = match message {

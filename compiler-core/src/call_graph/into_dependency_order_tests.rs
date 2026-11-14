@@ -55,6 +55,8 @@ fn parse_and_order(
                 can_run_on_javascript: true,
             },
             purity: Purity::Impure,
+            requires: vec![],
+            ensures: vec![],
         })
         .collect_vec();
     let constants = constants
